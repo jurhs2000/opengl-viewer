@@ -15,26 +15,35 @@ rend = Renderer(screen)
 rend.setShaders(shaders.vertex, shaders.fragment)
 
 face = Model('../models/face/model.obj', '../models/face/model.bmp')
-face.pos.z = -5.0
 rend.scene.append(face)
 
 deltaTime = 0.0
 isRunning = True
 while isRunning:
   keys = pygame.key.get_pressed()
+  # distance between camera and object
+  d = ((rend.camPos.x - 0.0)**2 + (rend.camPos.z - 0.0)**2)**0.5
+  d2 = ((rend.camPos.y - 0.0)**2 + (rend.camPos.z - 0.0)**2)**0.5
   if keys[K_d]:
-    rend.camPos.x += 1 * deltaTime
+    if (d <= rend.cameraMaxDistance): rend.cameraMovement('right', d)
   if keys[K_a]:
-    rend.camPos.x -= 1 * deltaTime
+    if (d <= rend.cameraMaxDistance): rend.cameraMovement('left', d)
   if keys[K_w]:
-    rend.camPos.z -= 1 * deltaTime
+    if (d >= rend.cameraMinDistance): rend.cameraMovement('up', d2)
   if keys[K_s]:
-    rend.camPos.z += 1 * deltaTime
-
+    if (d <= rend.cameraMaxDistance): rend.cameraMovement('down', d2)
   if keys[K_q]:
-    rend.camRot.y += 15 * deltaTime
+    rend.camRot.y += 0.1
   if keys[K_e]:
-    rend.camRot.y -= 15 * deltaTime
+    rend.camRot.y -= 0.1
+  if keys[K_z]:
+    rend.camRot.x += 0.1
+  if keys[K_c]:
+    rend.camRot.x -= 0.1
+  if keys[K_y]:
+    rend.camRot.z += 0.1
+  if keys[K_h]:
+    rend.camRot.z -= 0.1
 
   if keys[K_LEFT]:
     if rend.value >= 0: rend.value -= 0.1 * deltaTime
@@ -57,6 +66,16 @@ while isRunning:
         rend.filledMode()
       if ev.key == K_2:
         rend.wireframeMode()
+      if ev.key == K_3:
+        rend.setShaders(shaders.vertex, shaders.fragment)
+      if ev.key == K_4:
+        rend.setShaders(shaders.toon_vertex, shaders.toon_fragment)
+    # mouse scroll
+    if ev.type == pygame.MOUSEBUTTONDOWN:
+      if ev.button == 4:
+        if (d <= rend.cameraMaxDistance): rend.cameraMovement('forward', d)
+      if ev.button == 5:
+        if (d <= rend.cameraMaxDistance): rend.cameraMovement('backward', d)
 
   rend.currentTime += deltaTime
   deltaTime = clock.tick(60) / 1000

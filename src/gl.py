@@ -3,6 +3,7 @@ from OpenGL.GL import *
 from OpenGL.GL.shaders import compileProgram, compileShader
 from pygame import image
 from numpy import array, float32
+import math
 from objLoader import Obj
 
 class Model(object):
@@ -79,16 +80,52 @@ class Renderer(object):
     glViewport(0, 0, self.width, self.height)
 
     self.scene = []
-    self.pointLight = glm.vec3(-10, 5, -5)
+    self.pointLight = glm.vec3(8, 5, 5)
 
     # View matrix
-    self.camPos = glm.vec3(0.0, 0.0, 0.0)
+    self.camPos = glm.vec3(0.0, 0.0, 10.0)
     self.camRot = glm.vec3(0.0, 0.0, 0.0) # pitch, yaw, roll
+    self.camRotRef = glm.vec3(0.0, 0.0, 0.0) # pitch, yaw, roll
     self.fov = 60
     self.currentTime = 0
     self.value = 0
+    self.cameraMinDistance = 1
+    self.cameraMaxDistance = 25
+    self.lookAt = glm.vec3(0.0, 0.0, 0.0)
 
     self.projectionMatrix = glm.perspective(glm.radians(self.fov), self.width / self.height, 0.1, 1000) # fov, aspect ratio, near plane, far plane
+
+  def cameraMovement(self, type, distance):
+    if type == "forward":
+      # move camera forward along the direction it is facing
+      self.camPos += glm.vec3(glm.rotate(glm.mat4(1), glm.radians(self.camRot.y), glm.vec3(0, 1, 0)) * glm.vec4(0, 0, -1, 0)) * 0.1
+    elif type == "backward":
+      self.camPos += glm.vec3(glm.rotate(glm.mat4(1), glm.radians(self.camRot.y), glm.vec3(0, 1, 0)) * glm.vec4(0, 0, 1, 0)) * 0.1
+    elif type == "left":
+      self.camRotRef += glm.vec3(0, -1, 0)
+      self.camPos.x = math.sin(glm.radians(self.camRotRef.y)) * distance
+      self.camPos.z = math.cos(glm.radians(self.camRotRef.y)) * distance
+    elif type == "right":
+      self.camRotRef -= glm.vec3(0, -1, 0)
+      self.camPos.x = math.sin(glm.radians(self.camRotRef.y)) * distance
+      self.camPos.z = math.cos(glm.radians(self.camRotRef.y)) * distance
+    elif type == "up":
+      self.camRotRef -= glm.vec3(1, 0, 0)
+      self.camPos.y = math.sin(glm.radians(-self.camRotRef.x)) * distance
+      self.camPos.z = math.cos(glm.radians(-self.camRotRef.x)) * distance
+    elif type == "down":
+      self.camRotRef += glm.vec3(1, 0, 0)
+      self.camPos.y = math.sin(glm.radians(-self.camRotRef.x)) * distance
+      self.camPos.z = math.cos(glm.radians(-self.camRotRef.x)) * distance
+    self.cameraRotation()
+
+  # camera rotation always looking at 0, 0, 0
+  def cameraRotation(self):
+    angle = math.sin(self.camPos.x / self.camPos.z)
+    angle = angle
+    self.camRot.y = math.degrees(angle)
+    angle = math.sin(self.camPos.y / self.camPos.z)
+    self.camRot.x = math.degrees(-angle)
 
   def getViewMatrix(self):
     identity = glm.mat4(1)
