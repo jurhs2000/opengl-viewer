@@ -83,61 +83,53 @@ class Renderer(object):
     self.pointLight = glm.vec3(8, 5, 5)
 
     # View matrix
-    self.camPos = glm.vec3(0.0, 0.0, 10.0)
-    self.camRot = glm.vec3(0.0, 0.0, 0.0) # pitch, yaw, roll
+    self.camPos = glm.vec3(0.0, 0.0, -10.0)
     self.camRotRef = glm.vec3(0.0, 0.0, 0.0) # pitch, yaw, roll
     self.fov = 60
     self.currentTime = 0
     self.value = 0
     self.cameraMinDistance = 1
     self.cameraMaxDistance = 25
-    self.lookAt = glm.vec3(0.0, 0.0, 0.0)
+    self.target = glm.vec3(0.0, 0.0, 0.0)
+    self.viewMatrix = glm.lookAt(self.target - self.camPos, self.target, glm.vec3(0, 1, 0))
 
     self.projectionMatrix = glm.perspective(glm.radians(self.fov), self.width / self.height, 0.1, 1000) # fov, aspect ratio, near plane, far plane
 
-  def cameraMovement(self, type, distance):
+  def cameraMovement(self, type):
+    d = ((self.camPos.x - self.target.x)**2 + (self.camPos.y - self.target.y)**2 + (self.camPos.z - self.target.z)**2)**0.5
+    dx = ((self.camPos.x - self.target.x)**2 + (self.camPos.z - self.target.z)**2)**0.5
+    dy = ((self.camPos.y - self.target.y)**2 + (self.camPos.z - self.target.z)**2)**0.5
     if type == "forward":
       # move camera forward along the direction it is facing
-      self.camPos += glm.vec3(glm.rotate(glm.mat4(1), glm.radians(self.camRot.y), glm.vec3(0, 1, 0)) * glm.vec4(0, 0, -1, 0)) * 0.1
+      self.camPos -= glm.vec3(self.camPos.x - self.target.x, self.camPos.y - self.target.y, self.camPos.z - self.target.z) * 0.1
     elif type == "backward":
-      self.camPos += glm.vec3(glm.rotate(glm.mat4(1), glm.radians(self.camRot.y), glm.vec3(0, 1, 0)) * glm.vec4(0, 0, 1, 0)) * 0.1
+      self.camPos += glm.vec3(self.camPos.x - self.target.x, self.camPos.y - self.target.y, self.camPos.z - self.target.z) * 0.1
     elif type == "left":
-      self.camRotRef += glm.vec3(0, -1, 0)
-      self.camPos.x = math.sin(glm.radians(self.camRotRef.y)) * distance
-      self.camPos.z = math.cos(glm.radians(self.camRotRef.y)) * distance
+      if math.copysign(1, self.camPos.z) != math.copysign(1, -glm.cos(glm.radians(self.camRotRef.x - 1)) * dx):
+        self.camRotRef += glm.vec3(0, 0, 180)
+      self.camRotRef += glm.vec3(-1, 0, 0)
+      self.camPos.x = -glm.sin(glm.radians(self.camRotRef.x)) * dx
+      self.camPos.z = -glm.cos(glm.radians(self.camRotRef.x)) * dx
     elif type == "right":
-      self.camRotRef -= glm.vec3(0, -1, 0)
-      self.camPos.x = math.sin(glm.radians(self.camRotRef.y)) * distance
-      self.camPos.z = math.cos(glm.radians(self.camRotRef.y)) * distance
+      if math.copysign(1, self.camPos.z) != math.copysign(1, -glm.cos(glm.radians(self.camRotRef.x + 1)) * dx):
+        #print(self.camRotRef.z)
+        self.camRotRef += glm.vec3(0, 0, 180)
+      self.camRotRef -= glm.vec3(-1, 0, 0)
+      self.camPos.x = -glm.sin(glm.radians(self.camRotRef.x)) * dx
+      self.camPos.z = -glm.cos(glm.radians(self.camRotRef.x)) * dx
     elif type == "up":
-      self.camRotRef -= glm.vec3(1, 0, 0)
-      self.camPos.y = math.sin(glm.radians(-self.camRotRef.x)) * distance
-      self.camPos.z = math.cos(glm.radians(-self.camRotRef.x)) * distance
+      #print(self.camPos.z)
+      #print(-glm.cos(glm.radians(self.camRotRef.z + 1)) * dy)
+      if math.copysign(1, self.camPos.z) == math.copysign(1, -glm.cos(glm.radians(self.camRotRef.z + 1)) * dy):
+        self.camRotRef -= glm.vec3(0, -1, -1)
+        self.camPos.y = -glm.sin(glm.radians(self.camRotRef.y)) * dy
+        self.camPos.z = -glm.cos(glm.radians(self.camRotRef.z)) * dy
     elif type == "down":
-      self.camRotRef += glm.vec3(1, 0, 0)
-      self.camPos.y = math.sin(glm.radians(-self.camRotRef.x)) * distance
-      self.camPos.z = math.cos(glm.radians(-self.camRotRef.x)) * distance
-    self.cameraRotation()
-
-  # camera rotation always looking at 0, 0, 0
-  def cameraRotation(self):
-    angle = math.sin(self.camPos.x / self.camPos.z)
-    angle = angle
-    self.camRot.y = math.degrees(angle)
-    angle = math.sin(self.camPos.y / self.camPos.z)
-    self.camRot.x = math.degrees(-angle)
-
-  def getViewMatrix(self):
-    identity = glm.mat4(1)
-    translateMatrix = glm.translate(identity, self.camPos)
-
-    pitch = glm.rotate(identity, glm.radians(self.camRot.x), glm.vec3(1, 0, 0))
-    yaw = glm.rotate(identity, glm.radians(self.camRot.y), glm.vec3(0, 1, 0))
-    roll = glm.rotate(identity, glm.radians(self.camRot.z), glm.vec3(0, 0, 1))
-
-    rotationMatrix = pitch * yaw * roll
-    camMatrix = translateMatrix * rotationMatrix
-    return glm.inverse(camMatrix)
+      if math.copysign(1, self.camPos.z) == math.copysign(1, -glm.cos(glm.radians(self.camRotRef.z - 1)) * dy):
+        self.camRotRef += glm.vec3(0, -1, -1)
+        self.camPos.y = -glm.sin(glm.radians(self.camRotRef.y)) * dy
+        self.camPos.z = -glm.cos(glm.radians(self.camRotRef.z)) * dy
+    self.viewMatrix = glm.lookAt(self.target - self.camPos, self.target, glm.vec3(0, 1, 0))
 
   def wireframeMode(self):
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
@@ -158,7 +150,7 @@ class Renderer(object):
     glUseProgram(self.activeShader)
 
     if self.activeShader:
-        glUniformMatrix4fv(glGetUniformLocation(self.activeShader, "viewMatrix"), 1, GL_FALSE, glm.value_ptr(self.getViewMatrix()))
+        glUniformMatrix4fv(glGetUniformLocation(self.activeShader, "viewMatrix"), 1, GL_FALSE, glm.value_ptr(self.viewMatrix))
         glUniformMatrix4fv(glGetUniformLocation(self.activeShader, "projectionMatrix"), 1, GL_FALSE, glm.value_ptr(self.projectionMatrix))
         glUniform1f(glGetUniformLocation(self.activeShader, "currentTime"), self.currentTime)
         glUniform1f(glGetUniformLocation(self.activeShader, "value"), self.value)
