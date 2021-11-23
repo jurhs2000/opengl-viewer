@@ -7,7 +7,7 @@ import math
 from objLoader import Obj
 
 class Model(object):
-  def __init__(self, objName, textureName):
+  def __init__(self, objName, textureName, textureName2):
     self.model = Obj(objName)
     self.createVertexBuffer()
     self.pos = glm.vec3(0.0, 0.0, 0.0)
@@ -17,6 +17,17 @@ class Model(object):
     self.textureSurface = image.load(textureName)
     self.textureData = image.tostring(self.textureSurface, "RGB", True)
     self.texture = glGenTextures(1)
+
+    self.textureSurface2 = image.load(textureName2)
+    self.textureData2 = image.tostring(self.textureSurface2, "RGB", True)
+    self.texture2 = glGenTextures(1)
+
+    self.maxY = -float('inf')
+    self.minY = float('inf')
+    for face in self.model.faces:
+      for v in face:
+        self.maxY = max(self.maxY, self.model.vertices[v[0] - 1][1])
+        self.minY = min(self.minY, self.model.vertices[v[0] - 1][1])
 
   def getModelMatrix(self):
     identity = glm.mat4(1)
@@ -64,8 +75,14 @@ class Model(object):
     glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 4 * 8, ctypes.c_void_p(4 * 5)) # Attribute ID, Number of components per vertex, Data type, Normalize data, Stride, Offset
     glEnableVertexAttribArray(2)
     # Bind texture
+    glActiveTexture(GL_TEXTURE0)
     glBindTexture(GL_TEXTURE_2D, self.texture)
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, self.textureSurface.get_width(), self.textureSurface.get_height(), 0, GL_RGB, GL_UNSIGNED_BYTE, self.textureData)
+    glGenerateMipmap(GL_TEXTURE_2D)
+    # Bind texture 2
+    glActiveTexture(GL_TEXTURE1)
+    glBindTexture(GL_TEXTURE_2D, self.texture2)
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, self.textureSurface2.get_width(), self.textureSurface2.get_height(), 0, GL_RGB, GL_UNSIGNED_BYTE, self.textureData2)
     glGenerateMipmap(GL_TEXTURE_2D)
 
     glDrawArrays(GL_TRIANGLES, 0, len(self.model.faces) * 3)
@@ -131,6 +148,10 @@ class Renderer(object):
         self.camPos.z = -glm.cos(glm.radians(self.camRotRef.z)) * dy
     self.viewMatrix = glm.lookAt(self.target - self.camPos, self.target, glm.vec3(0, 1, 0))
 
+  def getForwardVector(self):
+    forward = glm.normalize(self.target - self.camPos)
+    self.forwardVector = glm.vec3(forward.x * 1.0, forward.y * 1.0, forward.z * 1.0)
+
   def wireframeMode(self):
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
 
@@ -148,6 +169,7 @@ class Renderer(object):
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
     glUseProgram(self.activeShader)
+    self.getForwardVector()
 
     if self.activeShader:
         glUniformMatrix4fv(glGetUniformLocation(self.activeShader, "viewMatrix"), 1, GL_FALSE, glm.value_ptr(self.viewMatrix))
@@ -155,8 +177,13 @@ class Renderer(object):
         glUniform1f(glGetUniformLocation(self.activeShader, "currentTime"), self.currentTime)
         glUniform1f(glGetUniformLocation(self.activeShader, "value"), self.value)
         glUniform3f(glGetUniformLocation(self.activeShader, "pointLight"), self.pointLight.x, self.pointLight.y, self.pointLight.z)
+        glUniform3f(glGetUniformLocation(self.activeShader, "forwardVector"), self.forwardVector.x, self.forwardVector.y, self.forwardVector.z)
 
     for obj in self.scene:
       if self.activeShader:
         glUniformMatrix4fv(glGetUniformLocation(self.activeShader, "modelMatrix"), 1, GL_FALSE, glm.value_ptr(obj.getModelMatrix()))
+        glUniform1i(glGetUniformLocation(self.activeShader, "textureSampler"), 0)
+        glUniform1i(glGetUniformLocation(self.activeShader, "textureSampler2"), 1)
+        glUniform1f(glGetUniformLocation(self.activeShader, "maxY"), obj.maxY)
+        glUniform1f(glGetUniformLocation(self.activeShader, "minY"), obj.minY)
       obj.renderInScene()

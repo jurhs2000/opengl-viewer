@@ -12,9 +12,9 @@ screen = pygame.display.set_mode((width, height), pygame.DOUBLEBUF | pygame.OPEN
 clock = pygame.time.Clock()
 
 rend = Renderer(screen)
-rend.setShaders(shaders.vertex, shaders.fragment)
+rend.setShaders(shaders.normal["vertex"], shaders.normal["fragment"])
 
-face = Model('../models/face/model.obj', '../models/face/model.bmp')
+face = Model('../models/face/model.obj', '../models/face/model.bmp', '../models/face/model_normal.bmp')
 rend.scene.append(face)
 
 deltaTime = 0.0
@@ -50,9 +50,15 @@ while isRunning:
       if ev.key == K_2:
         rend.wireframeMode()
       if ev.key == K_3:
-        rend.setShaders(shaders.vertex, shaders.fragment)
+        rend.setShaders(shaders.normal["vertex"], shaders.normal["fragment"])
       if ev.key == K_4:
-        rend.setShaders(shaders.toon_vertex, shaders.toon_fragment)
+        rend.setShaders(shaders.toon["vertex"], shaders.toon["fragment"])
+      if ev.key == K_5:
+        rend.setShaders(shaders.gradient["vertex"], shaders.gradient["fragment"])
+      if ev.key == K_6:
+        rend.setShaders(shaders.highlight["vertex"], shaders.highlight["fragment"])
+      if ev.key == K_7:
+        rend.setShaders(shaders.textureBlend["vertex"], shaders.textureBlend["fragment"])
     # mouse scroll
     if ev.type == pygame.MOUSEBUTTONDOWN:
       if ev.button == 4:
