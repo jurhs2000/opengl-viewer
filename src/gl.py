@@ -7,7 +7,7 @@ import math
 from objLoader import Obj
 
 class Model(object):
-  def __init__(self, objName, textureName, textureName2):
+  def __init__(self, objName, textureName, textureName2, normalMapName):
     self.model = Obj(objName)
     self.createVertexBuffer()
     self.pos = glm.vec3(0.0, 0.0, 0.0)
@@ -21,6 +21,10 @@ class Model(object):
     self.textureSurface2 = image.load(textureName2)
     self.textureData2 = image.tostring(self.textureSurface2, "RGB", True)
     self.texture2 = glGenTextures(1)
+
+    self.normalMapSurface = image.load(normalMapName)
+    self.normalMapData = image.tostring(self.normalMapSurface, "RGB", True)
+    self.normalMap = glGenTextures(1)
 
     self.maxY = -float('inf')
     self.minY = float('inf')
@@ -56,6 +60,30 @@ class Model(object):
         buffer.append(normal[0])
         buffer.append(normal[1])
         buffer.append(normal[2])
+        A = self.model.vertices[face[0][0] - 1]
+        B = self.model.vertices[face[1][0] - 1]
+        C = self.model.vertices[face[2][0] - 1]
+        uvsA = self.model.textcoords[face[0][1] - 1]
+        uvsB = self.model.textcoords[face[1][1] - 1]
+        uvsC = self.model.textcoords[face[2][1] - 1]
+        edge1 = [B[0] - A[0], B[1] - A[1], B[2] - A[2]]
+        edge2 = [C[0] - A[0], C[1] - A[1], C[2] - A[2]]
+        deltaUV1 = [uvsB[0] - uvsA[0], uvsB[1] - uvsA[1]]
+        deltaUV2 = [uvsC[0] - uvsA[0], uvsC[1] - uvsA[1]]
+        try:
+          f = 1.0 / (deltaUV1[0] * deltaUV2[1] - deltaUV1[1] * deltaUV2[0])
+        except ZeroDivisionError:
+          f = 999999
+        tangent = glm.vec3((f * (deltaUV2[1] * edge1[0] - deltaUV1[1] * edge2[0])), (f * (deltaUV2[1] * edge1[1] - deltaUV1[1] * edge2[1])), (f * (deltaUV2[1] * edge1[2] - deltaUV1[1] * edge2[2])))
+        self.tangent = glm.normalize(tangent)
+        bitangent = glm.vec3((f * (-deltaUV2[0] * edge1[0] + deltaUV1[0] * edge2[0])), (f * (-deltaUV2[0] * edge1[1] + deltaUV1[0] * edge2[1])), (f * (-deltaUV2[0] * edge1[2] + deltaUV1[0] * edge2[2])))
+        self.bitangent = glm.normalize(bitangent)
+        buffer.append(self.tangent.x)
+        buffer.append(self.tangent.y)
+        buffer.append(self.tangent.z)
+        buffer.append(self.bitangent.x)
+        buffer.append(self.bitangent.y)
+        buffer.append(self.bitangent.z)
     self.vertBuffer = array(buffer, dtype=float32)
 
     self.VBO = glGenBuffers(1) # Vertex Buffer Object
@@ -66,14 +94,20 @@ class Model(object):
     glBindBuffer(GL_ARRAY_BUFFER, self.VBO)
     glBufferData(GL_ARRAY_BUFFER, self.vertBuffer.nbytes, self.vertBuffer, GL_STATIC_DRAW) # Buffer ID, Buffer size in bytes, Buffer data, Usage
     # Position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 4 * 8, ctypes.c_void_p(0)) # Attribute ID, Number of components per vertex, Data type, Normalize data, Stride, Offset
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 4 * 14, ctypes.c_void_p(0)) # Attribute ID, Number of components per vertex, Data type, Normalize data, Stride, Offset
     glEnableVertexAttribArray(0)
     # Texture coords attribute
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * 8, ctypes.c_void_p(4 * 3)) # Attribute ID, Number of components per vertex, Data type, Normalize data, Stride, Offset
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * 14, ctypes.c_void_p(4 * 3)) # Attribute ID, Number of components per vertex, Data type, Normalize data, Stride, Offset
     glEnableVertexAttribArray(1)
     # Normal attribute
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 4 * 8, ctypes.c_void_p(4 * 5)) # Attribute ID, Number of components per vertex, Data type, Normalize data, Stride, Offset
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 4 * 14, ctypes.c_void_p(4 * 5)) # Attribute ID, Number of components per vertex, Data type, Normalize data, Stride, Offset
     glEnableVertexAttribArray(2)
+    # Tangent attribute
+    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 4 * 14, ctypes.c_void_p(4 * 8)) # Attribute ID, Number of components per vertex, Data type, Normalize data, Stride, Offset
+    glEnableVertexAttribArray(3)
+    # Bitangent attribute
+    glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, 4 * 14, ctypes.c_void_p(4 * 11)) # Attribute ID, Number of components per vertex, Data type, Normalize data, Stride, Offset
+    glEnableVertexAttribArray(4)
     # Bind texture
     glActiveTexture(GL_TEXTURE0)
     glBindTexture(GL_TEXTURE_2D, self.texture)
@@ -83,6 +117,11 @@ class Model(object):
     glActiveTexture(GL_TEXTURE1)
     glBindTexture(GL_TEXTURE_2D, self.texture2)
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, self.textureSurface2.get_width(), self.textureSurface2.get_height(), 0, GL_RGB, GL_UNSIGNED_BYTE, self.textureData2)
+    glGenerateMipmap(GL_TEXTURE_2D)
+    # Bind normal map
+    glActiveTexture(GL_TEXTURE2)
+    glBindTexture(GL_TEXTURE_2D, self.normalMap)
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, self.normalMapSurface.get_width(), self.normalMapSurface.get_height(), 0, GL_RGB, GL_UNSIGNED_BYTE, self.normalMapData)
     glGenerateMipmap(GL_TEXTURE_2D)
 
     glDrawArrays(GL_TRIANGLES, 0, len(self.model.faces) * 3)
@@ -172,18 +211,20 @@ class Renderer(object):
     self.getForwardVector()
 
     if self.activeShader:
-        glUniformMatrix4fv(glGetUniformLocation(self.activeShader, "viewMatrix"), 1, GL_FALSE, glm.value_ptr(self.viewMatrix))
-        glUniformMatrix4fv(glGetUniformLocation(self.activeShader, "projectionMatrix"), 1, GL_FALSE, glm.value_ptr(self.projectionMatrix))
-        glUniform1f(glGetUniformLocation(self.activeShader, "currentTime"), self.currentTime)
-        glUniform1f(glGetUniformLocation(self.activeShader, "value"), self.value)
-        glUniform3f(glGetUniformLocation(self.activeShader, "pointLight"), self.pointLight.x, self.pointLight.y, self.pointLight.z)
-        glUniform3f(glGetUniformLocation(self.activeShader, "forwardVector"), self.forwardVector.x, self.forwardVector.y, self.forwardVector.z)
+      glUniformMatrix4fv(glGetUniformLocation(self.activeShader, "viewMatrix"), 1, GL_FALSE, glm.value_ptr(self.viewMatrix))
+      glUniformMatrix4fv(glGetUniformLocation(self.activeShader, "projectionMatrix"), 1, GL_FALSE, glm.value_ptr(self.projectionMatrix))
+      glUniform1f(glGetUniformLocation(self.activeShader, "currentTime"), self.currentTime)
+      glUniform1f(glGetUniformLocation(self.activeShader, "value"), self.value)
+      glUniform3f(glGetUniformLocation(self.activeShader, "pointLight"), self.pointLight.x, self.pointLight.y, self.pointLight.z)
+      glUniform3f(glGetUniformLocation(self.activeShader, "forwardVector"), self.forwardVector.x, self.forwardVector.y, self.forwardVector.z)
+      glUniform3f(glGetUniformLocation(self.activeShader, "camPos"), self.camPos.x, self.camPos.y, self.camPos.z)
 
     for obj in self.scene:
       if self.activeShader:
         glUniformMatrix4fv(glGetUniformLocation(self.activeShader, "modelMatrix"), 1, GL_FALSE, glm.value_ptr(obj.getModelMatrix()))
         glUniform1i(glGetUniformLocation(self.activeShader, "textureSampler"), 0)
         glUniform1i(glGetUniformLocation(self.activeShader, "textureSampler2"), 1)
+        glUniform1i(glGetUniformLocation(self.activeShader, "normalMap"), 2)
         glUniform1f(glGetUniformLocation(self.activeShader, "maxY"), obj.maxY)
         glUniform1f(glGetUniformLocation(self.activeShader, "minY"), obj.minY)
       obj.renderInScene()

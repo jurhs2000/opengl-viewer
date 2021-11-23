@@ -12,9 +12,9 @@ screen = pygame.display.set_mode((width, height), pygame.DOUBLEBUF | pygame.OPEN
 clock = pygame.time.Clock()
 
 rend = Renderer(screen)
-rend.setShaders(shaders.normal["vertex"], shaders.normal["fragment"])
+rend.setShaders(shaders.default["vertex"], shaders.default["fragment"])
 
-face = Model('../models/face/model.obj', '../models/face/model.bmp', '../models/face/model_normal.bmp')
+face = Model('../models/face/model.obj', '../models/face/model.bmp', '../models/face/model_normal.bmp', '../models/face/model_normal.bmp')
 rend.scene.append(face)
 
 deltaTime = 0.0
@@ -50,7 +50,7 @@ while isRunning:
       if ev.key == K_2:
         rend.wireframeMode()
       if ev.key == K_3:
-        rend.setShaders(shaders.normal["vertex"], shaders.normal["fragment"])
+        rend.setShaders(shaders.default["vertex"], shaders.default["fragment"])
       if ev.key == K_4:
         rend.setShaders(shaders.toon["vertex"], shaders.toon["fragment"])
       if ev.key == K_5:
@@ -59,6 +59,10 @@ while isRunning:
         rend.setShaders(shaders.highlight["vertex"], shaders.highlight["fragment"])
       if ev.key == K_7:
         rend.setShaders(shaders.textureBlend["vertex"], shaders.textureBlend["fragment"])
+      if ev.key == K_8:
+        rend.setShaders(shaders.normalMap["vertex"], shaders.normalMap["fragment"])
+      if ev.key == K_9:
+        rend.setShaders(shaders.wave["vertex"], shaders.wave["fragment"])
     # mouse scroll
     if ev.type == pygame.MOUSEBUTTONDOWN:
       if ev.button == 4:
