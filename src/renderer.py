@@ -13,13 +13,15 @@ models = [
     "texture2": "../models/face/model_normal.bmp",
     "normal": "../models/face/model_normal.bmp",
     "scale": [1, 1, 1],
+    "pos": [0, 0, 0],
   },
   {
     "obj": "../models/lugia/lugia.obj",
     "texture": "../models/lugia/Lugia-TextureMap.jpg",
     "texture2": "../models/lugia/Lugia-TextureMap2.jpg",
     "normal": "../models/lugia/Lugia-NormalMap.jpg",
-    "scale": [1, 1, 1],
+    "scale": [0.7, 0.7, 0.7],
+    "pos": [0, 0, 0],
   },
   {
     "obj": "../models/boo/source/boo.obj",
@@ -27,13 +29,15 @@ models = [
     "texture2": None,
     "normal": None,
     "scale": [1, 1, 1],
+    "pos": [0, -0.3, 0],
   },
   {
     "obj": "../models/bowser/source/pose.obj",
     "texture": "../models/bowser/textures/DryKoopaAll.png",
     "texture2": "../models/bowser/textures/DryKoopaAllGlow.png",
     "normal": None,
-    "scale": [0.5, 0.5, 0.5],
+    "scale": [0.4, 0.4, 0.4],
+    "pos": [0, -1, 0],
   },
   {
     "obj": "../models/earth/earth.obj",
@@ -41,13 +45,15 @@ models = [
     "texture2": "../models/earth/earthNight.bmp",
     "normal": None,
     "scale": [1, 1, 1],
+    "pos": [0, 0, 0],
   },
   {
     "obj": "../models/lakitu/source/lakitu.obj",
     "texture": "../models/lakitu/textures/lakitu.png",
     "texture2": None,
     "normal": None,
-    "scale": [0.5, 0.5, 0.5],
+    "scale": [0.3, 0.3, 0.3],
+    "pos": [0, -1, 0],
   },
   {
     "obj": "../models/piranha/piranha.obj",
@@ -55,6 +61,7 @@ models = [
     "texture2": None,
     "normal": "../models/piranha/npc072_body_nml.png",
     "scale": [1, 1, 1],
+    "pos": [0, -0.6, 0],
   }
 ]
 
@@ -66,7 +73,7 @@ rend = Renderer(screen)
 rend.setShaders(shaders.default["vertex"], shaders.default["fragment"])
 
 for model in models:
-  rend.scene.append(Model(models.index(model), model["obj"], model["texture"], model["texture2"], model["normal"], model["scale"]))
+  rend.scene.append(Model(models.index(model), model["obj"], model["texture"], model["texture2"], model["normal"], model["scale"], model["pos"]))
 
 isMoving = False # Para saber si se esta moviendo la camara con el mouse
 lastPos = (0, 0) # Ultima posicion del mouse

@@ -7,11 +7,11 @@ import math
 from objLoader import Obj
 
 class Model(object):
-  def __init__(self, id, objName, textureName, textureName2, normalMapName, scale):
+  def __init__(self, id, objName, textureName, textureName2, normalMapName, scale, pos):
     self.id = id
     self.model = Obj(objName)
     self.createVertexBuffer()
-    self.pos = glm.vec3(0.0, 0.0, 0.0)
+    self.pos = glm.vec3(pos[0], pos[1], pos[2])
     self.rot = glm.vec3(0.0, 0.0, 0.0)
     self.scale = glm.vec3(scale[0], scale[1], scale[2])
 

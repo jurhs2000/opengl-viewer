@@ -25,11 +25,7 @@ default = {
       float intensity = dot(modelMatrix * norm, normalize(light - pos));
 
       gl_Position = projectionMatrix * viewMatrix * modelMatrix * pos;
-      if (intensity <= 0.0) {
-        outColor = vec3(1.0, 1.0 - value, 1.0 - value) * 0.1;
-      } else {
-        outColor = vec3(1.0, 1.0 - value, 1.0 - value) * intensity;
-      }
+      outColor = vec3(1.0, 1.0 - value, 1.0 - value) * intensity;
       outTextCoords = textCoords;
     }
   """,
