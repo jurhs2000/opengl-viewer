@@ -25,7 +25,11 @@ default = {
       float intensity = dot(modelMatrix * norm, normalize(light - pos));
 
       gl_Position = projectionMatrix * viewMatrix * modelMatrix * pos;
-      outColor = vec3(1.0, 1.0 - value, 1.0 - value) * intensity;
+      if (intensity <= 0.0) {
+        outColor = vec3(1.0, 1.0 - value, 1.0 - value) * 0.1;
+      } else {
+        outColor = vec3(1.0, 1.0 - value, 1.0 - value) * intensity;
+      }
       outTextCoords = textCoords;
     }
   """,
@@ -56,9 +60,11 @@ toon = {
     uniform mat4 viewMatrix;
     uniform mat4 projectionMatrix;
     uniform vec3 pointLight;
+    uniform float value;
 
     out float intensity;
     out vec2 outTextCoords;
+    out float outValue;
 
     void main()
     {
@@ -70,6 +76,7 @@ toon = {
 
       gl_Position = projectionMatrix * viewMatrix * modelMatrix * pos;
       outTextCoords = textCoords;
+      outValue = value;
     }
   """,
   "fragment": """
@@ -78,19 +85,22 @@ toon = {
 
     in float intensity;
     in vec2 outTextCoords;
+    in float outValue;
 
     uniform sampler2D textureSampler;
 
     void main()
     {
-      if (intensity > 0.9) {
+      if (intensity > 0.9 * (outValue + 0.9)) {
         fragColor = vec4(1.0, 1.0, 1.0, 1.0) * texture(textureSampler, outTextCoords);
-      } else if (intensity > 0.6) {
+      } else if (intensity > 0.75 * (outValue + 0.8)) {
         fragColor = vec4(0.8, 0.8, 0.8, 1.0) * texture(textureSampler, outTextCoords);
-      } else if (intensity > 0.3) {
+      } else if (intensity > 0.6 * (outValue + 0.7)) {
         fragColor = vec4(0.6, 0.6, 0.6, 1.0) * texture(textureSampler, outTextCoords);
+      } else if (intensity > 0.3 * (outValue + 0.6)) {
+        fragColor = vec4(0.4, 0.4, 0.4, 1.0) * texture(textureSampler, outTextCoords);
       } else {
-        fragColor = vec4(0.3, 0.3, 0.3, 1.0) * texture(textureSampler, outTextCoords);
+        fragColor = vec4(0.2, 0.2, 0.2, 1.0) * texture(textureSampler, outTextCoords);
       }
     }
   """
@@ -108,10 +118,12 @@ gradient = {
     uniform mat4 projectionMatrix;
     uniform vec3 pointLight;
     uniform float currentTime;
+    uniform float value;
 
     out vec3 outColor;
     out vec3 outPosition;
     out float outCurrentTime;
+    out float outValue;
 
     void main()
     {
@@ -125,6 +137,7 @@ gradient = {
       outColor = vec3(1.0, 1.0, 1.0) * intensity;
       outPosition = position;
       outCurrentTime = currentTime;
+      outValue = value;
     }
   """,
   "fragment": """
@@ -134,6 +147,7 @@ gradient = {
     in vec3 outColor;
     in vec3 outPosition;
     in float outCurrentTime;
+    in float outValue;
 
     uniform float maxY;
     uniform float minY;
@@ -142,8 +156,8 @@ gradient = {
     {
       float height = maxY - minY;
       float y = outPosition.y;
-      vec3 upColor = vec3(abs(sin(outCurrentTime / 5)), 0.0, 1 - abs(sin(outCurrentTime / 5)));
-      vec3 downColor = vec3(abs(cos(outCurrentTime / 5)), 0.0, 1 - abs(cos(outCurrentTime / 5)));
+      vec3 upColor = vec3(abs(sin(outCurrentTime / 5)), 0.0 + (1 * (outValue)), 1 - abs(sin(outCurrentTime / 5)));
+      vec3 downColor = vec3(abs(cos(outCurrentTime / 5)), 0.0 + (1 * (outValue)), 1 - abs(cos(outCurrentTime / 5)));
       float b = (((y+abs(minY)) / height) * (upColor.x - downColor.x) + downColor.x);
       float g = (((y+abs(minY)) / height) * (upColor.y - downColor.y) + downColor.y);
       float r = (((y+abs(minY)) / height) * (upColor.z - downColor.z) + downColor.z);
@@ -162,9 +176,11 @@ highlight = {
     uniform mat4 modelMatrix;
     uniform mat4 viewMatrix;
     uniform mat4 projectionMatrix;
+    uniform float value;
 
     out vec3 outNormal;
     out vec2 outTextCoords;
+    out float outValue;
 
     void main()
     {
@@ -174,6 +190,7 @@ highlight = {
       gl_Position = projectionMatrix * viewMatrix * modelMatrix * pos;
       outTextCoords = textCoords;
       outNormal = normal;
+      outValue = value;
     }
   """,
   "fragment": """
@@ -182,6 +199,7 @@ highlight = {
 
     in vec3 outNormal;
     in vec2 outTextCoords;
+    in float outValue;
 
     uniform sampler2D textureSampler;
     uniform vec3 forwardVector;
@@ -189,7 +207,7 @@ highlight = {
     void main()
     {
       float parallel = dot(outNormal, forwardVector);
-      fragColor = vec4(1.0, 1.0, 0.0, 1.0) * vec4(1 - parallel, 1 - parallel, 1 - parallel, 1.0) * 2;
+      fragColor = vec4(1.0 * (1 - outValue), 1.0 * (1 - outValue), 0.0 + outValue, 1.0) * vec4(1 - parallel, 1 - parallel, 1 - parallel, 1.0) * 2;
       fragColor = fragColor * texture(textureSampler, outTextCoords);
     }
   """

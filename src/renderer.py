@@ -1,11 +1,62 @@
 import pygame
 from pygame.locals import *
-import numpy as np
 from gl import Renderer, Model
 import shaders
 
 width = 1366
 height = 768
+
+models = [
+  {
+    "obj": "../models/face/model.obj",
+    "texture": "../models/face/model.bmp",
+    "texture2": "../models/face/model_normal.bmp",
+    "normal": "../models/face/model_normal.bmp",
+    "scale": [1, 1, 1],
+  },
+  {
+    "obj": "../models/lugia/lugia.obj",
+    "texture": "../models/lugia/Lugia-TextureMap.jpg",
+    "texture2": "../models/lugia/Lugia-TextureMap2.jpg",
+    "normal": "../models/lugia/Lugia-NormalMap.jpg",
+    "scale": [1, 1, 1],
+  },
+  {
+    "obj": "../models/boo/source/boo.obj",
+    "texture": "../models/boo/textures/BooTexture.png",
+    "texture2": None,
+    "normal": None,
+    "scale": [1, 1, 1],
+  },
+  {
+    "obj": "../models/bowser/source/pose.obj",
+    "texture": "../models/bowser/textures/DryKoopaAll.png",
+    "texture2": "../models/bowser/textures/DryKoopaAllGlow.png",
+    "normal": None,
+    "scale": [0.5, 0.5, 0.5],
+  },
+  {
+    "obj": "../models/earth/earth.obj",
+    "texture": "../models/earth/earthDay.bmp",
+    "texture2": "../models/earth/earthNight.bmp",
+    "normal": None,
+    "scale": [1, 1, 1],
+  },
+  {
+    "obj": "../models/lakitu/source/lakitu.obj",
+    "texture": "../models/lakitu/textures/lakitu.png",
+    "texture2": None,
+    "normal": None,
+    "scale": [0.5, 0.5, 0.5],
+  },
+  {
+    "obj": "../models/piranha/piranha.obj",
+    "texture": "../models/piranha/npc072_body.png",
+    "texture2": None,
+    "normal": "../models/piranha/npc072_body_nml.png",
+    "scale": [1, 1, 1],
+  }
+]
 
 pygame.init()
 screen = pygame.display.set_mode((width, height), pygame.DOUBLEBUF | pygame.OPENGL)
@@ -14,9 +65,11 @@ clock = pygame.time.Clock()
 rend = Renderer(screen)
 rend.setShaders(shaders.default["vertex"], shaders.default["fragment"])
 
-face = Model('../models/face/model.obj', '../models/face/model.bmp', '../models/face/model_normal.bmp', '../models/face/model_normal.bmp')
-rend.scene.append(face)
+for model in models:
+  rend.scene.append(Model(models.index(model), model["obj"], model["texture"], model["texture2"], model["normal"], model["scale"]))
 
+isMoving = False # Para saber si se esta moviendo la camara con el mouse
+lastPos = (0, 0) # Ultima posicion del mouse
 deltaTime = 0.0
 isRunning = True
 while isRunning:
@@ -39,12 +92,29 @@ while isRunning:
     if rend.value >= 0: rend.value += 0.1 * deltaTime
     else: rend.value = 0
 
+  if keys[K_i]:
+    rend.moveModel('up')
+  if keys[K_k]:
+    rend.moveModel('down')
+  if keys[K_j]:
+    rend.moveModel('left')
+  if keys[K_l]:
+    rend.moveModel('right')
+  if keys[K_o]:
+    rend.moveModel('forward')
+  if keys[K_u]:
+    rend.moveModel('backward')
+
   for ev in pygame.event.get():
     if ev.type == pygame.QUIT:
       isRunning = False
     if ev.type == pygame.KEYDOWN:
       if ev.key == pygame.K_ESCAPE:
         isRunning = False
+      if ev.key == K_q:
+        rend.changeModel("previous")
+      if ev.key == K_e:
+        rend.changeModel("next")
       if ev.key == K_1:
         rend.filledMode()
       if ev.key == K_2:
@@ -69,6 +139,25 @@ while isRunning:
         if (d >= rend.cameraMinDistance): rend.cameraMovement('forward')
       if ev.button == 5:
         if (d <= rend.cameraMaxDistance): rend.cameraMovement('backward')
+      if ev.button == 1:
+        isMoving = True
+        lastPos = pygame.mouse.get_pos()
+    elif ev.type == pygame.MOUSEBUTTONUP:
+      if ev.button == 1:
+        isMoving = False
+    if ev.type == pygame.MOUSEMOTION:
+      if isMoving:
+        x, y = pygame.mouse.get_pos()
+        movX = x - lastPos[0]
+        movY = y - lastPos[1]
+        if movX > 20:
+          if (d <= rend.cameraMaxDistance): rend.cameraMovement('left')
+        if movX < -20:
+          if (d <= rend.cameraMaxDistance): rend.cameraMovement('right')
+        if movY > 20:
+          if (d <= rend.cameraMaxDistance): rend.cameraMovement('up')
+        if movY < -20:
+          if (d <= rend.cameraMaxDistance): rend.cameraMovement('down')
 
   rend.currentTime += deltaTime
   deltaTime = clock.tick(60) / 1000

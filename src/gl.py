@@ -7,24 +7,31 @@ import math
 from objLoader import Obj
 
 class Model(object):
-  def __init__(self, objName, textureName, textureName2, normalMapName):
+  def __init__(self, id, objName, textureName, textureName2, normalMapName, scale):
+    self.id = id
     self.model = Obj(objName)
     self.createVertexBuffer()
     self.pos = glm.vec3(0.0, 0.0, 0.0)
     self.rot = glm.vec3(0.0, 0.0, 0.0)
-    self.scale = glm.vec3(1.0, 1.0, 1.0)
+    self.scale = glm.vec3(scale[0], scale[1], scale[2])
 
     self.textureSurface = image.load(textureName)
     self.textureData = image.tostring(self.textureSurface, "RGB", True)
     self.texture = glGenTextures(1)
 
-    self.textureSurface2 = image.load(textureName2)
-    self.textureData2 = image.tostring(self.textureSurface2, "RGB", True)
-    self.texture2 = glGenTextures(1)
+    if textureName2 != None:
+      self.textureSurface2 = image.load(textureName2)
+      self.textureData2 = image.tostring(self.textureSurface2, "RGB", True)
+      self.texture2 = glGenTextures(1)
+    else:
+      self.texture2 = None
 
-    self.normalMapSurface = image.load(normalMapName)
-    self.normalMapData = image.tostring(self.normalMapSurface, "RGB", True)
-    self.normalMap = glGenTextures(1)
+    if normalMapName != None:
+      self.normalMapSurface = image.load(normalMapName)
+      self.normalMapData = image.tostring(self.normalMapSurface, "RGB", True)
+      self.normalMap = glGenTextures(1)
+    else:
+      self.normalMap = None
 
     self.maxY = -float('inf')
     self.minY = float('inf')
@@ -48,42 +55,137 @@ class Model(object):
   def createVertexBuffer(self):
     buffer = []
     for face in self.model.faces:
-      for i in range(3):
-        position = self.model.vertices[face[i][0] - 1]
-        buffer.append(position[0])
-        buffer.append(position[1])
-        buffer.append(position[2])
-        uvs = self.model.textcoords[face[i][1] - 1]
-        buffer.append(uvs[0])
-        buffer.append(uvs[1])
-        normal = self.model.normals[face[i][2] - 1]
-        buffer.append(normal[0])
-        buffer.append(normal[1])
-        buffer.append(normal[2])
-        A = self.model.vertices[face[0][0] - 1]
-        B = self.model.vertices[face[1][0] - 1]
-        C = self.model.vertices[face[2][0] - 1]
-        uvsA = self.model.textcoords[face[0][1] - 1]
-        uvsB = self.model.textcoords[face[1][1] - 1]
-        uvsC = self.model.textcoords[face[2][1] - 1]
-        edge1 = [B[0] - A[0], B[1] - A[1], B[2] - A[2]]
-        edge2 = [C[0] - A[0], C[1] - A[1], C[2] - A[2]]
-        deltaUV1 = [uvsB[0] - uvsA[0], uvsB[1] - uvsA[1]]
-        deltaUV2 = [uvsC[0] - uvsA[0], uvsC[1] - uvsA[1]]
-        try:
-          f = 1.0 / (deltaUV1[0] * deltaUV2[1] - deltaUV1[1] * deltaUV2[0])
-        except ZeroDivisionError:
-          f = 999999
-        tangent = glm.vec3((f * (deltaUV2[1] * edge1[0] - deltaUV1[1] * edge2[0])), (f * (deltaUV2[1] * edge1[1] - deltaUV1[1] * edge2[1])), (f * (deltaUV2[1] * edge1[2] - deltaUV1[1] * edge2[2])))
-        self.tangent = glm.normalize(tangent)
-        bitangent = glm.vec3((f * (-deltaUV2[0] * edge1[0] + deltaUV1[0] * edge2[0])), (f * (-deltaUV2[0] * edge1[1] + deltaUV1[0] * edge2[1])), (f * (-deltaUV2[0] * edge1[2] + deltaUV1[0] * edge2[2])))
-        self.bitangent = glm.normalize(bitangent)
-        buffer.append(self.tangent.x)
-        buffer.append(self.tangent.y)
-        buffer.append(self.tangent.z)
-        buffer.append(self.bitangent.x)
-        buffer.append(self.bitangent.y)
-        buffer.append(self.bitangent.z)
+      vertCount = len(face)
+      if vertCount == 3:
+        for i in range(3):
+          position = self.model.vertices[face[i][0] - 1]
+          buffer.append(position[0])
+          buffer.append(position[1])
+          buffer.append(position[2])
+          uvs = self.model.textcoords[face[i][1] - 1]
+          buffer.append(uvs[0])
+          buffer.append(uvs[1])
+          normal = self.model.normals[face[i][2] - 1]
+          buffer.append(normal[0])
+          buffer.append(normal[1])
+          buffer.append(normal[2])
+          A = self.model.vertices[face[0][0] - 1]
+          B = self.model.vertices[face[1][0] - 1]
+          C = self.model.vertices[face[2][0] - 1]
+          uvsA = self.model.textcoords[face[0][1] - 1]
+          uvsB = self.model.textcoords[face[1][1] - 1]
+          uvsC = self.model.textcoords[face[2][1] - 1]
+          edge1 = [B[0] - A[0], B[1] - A[1], B[2] - A[2]]
+          edge2 = [C[0] - A[0], C[1] - A[1], C[2] - A[2]]
+          deltaUV1 = [uvsB[0] - uvsA[0], uvsB[1] - uvsA[1]]
+          deltaUV2 = [uvsC[0] - uvsA[0], uvsC[1] - uvsA[1]]
+          try:
+            f = 1.0 / (deltaUV1[0] * deltaUV2[1] - deltaUV1[1] * deltaUV2[0])
+          except ZeroDivisionError:
+            f = 999999
+          tangent = glm.vec3((f * (deltaUV2[1] * edge1[0] - deltaUV1[1] * edge2[0])), (f * (deltaUV2[1] * edge1[1] - deltaUV1[1] * edge2[1])), (f * (deltaUV2[1] * edge1[2] - deltaUV1[1] * edge2[2])))
+          self.tangent = glm.normalize(tangent)
+          bitangent = glm.vec3((f * (-deltaUV2[0] * edge1[0] + deltaUV1[0] * edge2[0])), (f * (-deltaUV2[0] * edge1[1] + deltaUV1[0] * edge2[1])), (f * (-deltaUV2[0] * edge1[2] + deltaUV1[0] * edge2[2])))
+          self.bitangent = glm.normalize(bitangent)
+          buffer.append(self.tangent.x)
+          buffer.append(self.tangent.y)
+          buffer.append(self.tangent.z)
+          buffer.append(self.bitangent.x)
+          buffer.append(self.bitangent.y)
+          buffer.append(self.bitangent.z)
+      elif vertCount == 4:
+        for i in range(3):
+          if i == 0:
+            position = self.model.vertices[face[0][0] - 1]
+            uvs = self.model.textcoords[face[0][1] - 1]
+            normal = self.model.normals[face[0][2] - 1]
+          if i == 1:
+            position = self.model.vertices[face[1][0] - 1]
+            uvs = self.model.textcoords[face[1][1] - 1]
+            normal = self.model.normals[face[1][2] - 1]
+          if i == 2:
+            position = self.model.vertices[face[2][0] - 1]
+            uvs = self.model.textcoords[face[2][1] - 1]
+            normal = self.model.normals[face[2][2] - 1]
+          buffer.append(position[0])
+          buffer.append(position[1])
+          buffer.append(position[2])
+          buffer.append(uvs[0])
+          buffer.append(uvs[1])
+          buffer.append(normal[0])
+          buffer.append(normal[1])
+          buffer.append(normal[2])
+          A = self.model.vertices[face[0][0] - 1]
+          B = self.model.vertices[face[1][0] - 1]
+          C = self.model.vertices[face[2][0] - 1]
+          uvsA = self.model.textcoords[face[0][1] - 1]
+          uvsB = self.model.textcoords[face[1][1] - 1]
+          uvsC = self.model.textcoords[face[2][1] - 1]
+          edge1 = [B[0] - A[0], B[1] - A[1], B[2] - A[2]]
+          edge2 = [C[0] - A[0], C[1] - A[1], C[2] - A[2]]
+          deltaUV1 = [uvsB[0] - uvsA[0], uvsB[1] - uvsA[1]]
+          deltaUV2 = [uvsC[0] - uvsA[0], uvsC[1] - uvsA[1]]
+          try:
+            f = 1.0 / (deltaUV1[0] * deltaUV2[1] - deltaUV1[1] * deltaUV2[0])
+          except ZeroDivisionError:
+            f = 999999
+          tangent = glm.vec3((f * (deltaUV2[1] * edge1[0] - deltaUV1[1] * edge2[0])), (f * (deltaUV2[1] * edge1[1] - deltaUV1[1] * edge2[1])), (f * (deltaUV2[1] * edge1[2] - deltaUV1[1] * edge2[2])))
+          self.tangent = glm.normalize(tangent)
+          bitangent = glm.vec3((f * (-deltaUV2[0] * edge1[0] + deltaUV1[0] * edge2[0])), (f * (-deltaUV2[0] * edge1[1] + deltaUV1[0] * edge2[1])), (f * (-deltaUV2[0] * edge1[2] + deltaUV1[0] * edge2[2])))
+          self.bitangent = glm.normalize(bitangent)
+          buffer.append(self.tangent.x)
+          buffer.append(self.tangent.y)
+          buffer.append(self.tangent.z)
+          buffer.append(self.bitangent.x)
+          buffer.append(self.bitangent.y)
+          buffer.append(self.bitangent.z)
+        
+        for i in range(3):
+          if i == 0:
+            position = self.model.vertices[face[0][0] - 1]
+            uvs = self.model.textcoords[face[0][1] - 1]
+            normal = self.model.normals[face[0][2] - 1]
+          if i == 1:
+            position = self.model.vertices[face[2][0] - 1]
+            uvs = self.model.textcoords[face[2][1] - 1]
+            normal = self.model.normals[face[2][2] - 1]
+          if i == 2:
+            position = self.model.vertices[face[3][0] - 1]
+            uvs = self.model.textcoords[face[3][1] - 1]
+            normal = self.model.normals[face[3][2] - 1]
+          buffer.append(position[0])
+          buffer.append(position[1])
+          buffer.append(position[2])
+          buffer.append(uvs[0])
+          buffer.append(uvs[1])
+          buffer.append(normal[0])
+          buffer.append(normal[1])
+          buffer.append(normal[2])
+          A = self.model.vertices[face[0][0] - 1]
+          B = self.model.vertices[face[1][0] - 1]
+          C = self.model.vertices[face[2][0] - 1]
+          uvsA = self.model.textcoords[face[0][1] - 1]
+          uvsB = self.model.textcoords[face[1][1] - 1]
+          uvsC = self.model.textcoords[face[2][1] - 1]
+          edge1 = [B[0] - A[0], B[1] - A[1], B[2] - A[2]]
+          edge2 = [C[0] - A[0], C[1] - A[1], C[2] - A[2]]
+          deltaUV1 = [uvsB[0] - uvsA[0], uvsB[1] - uvsA[1]]
+          deltaUV2 = [uvsC[0] - uvsA[0], uvsC[1] - uvsA[1]]
+          try:
+            f = 1.0 / (deltaUV1[0] * deltaUV2[1] - deltaUV1[1] * deltaUV2[0])
+          except ZeroDivisionError:
+            f = 999999
+          tangent = glm.vec3((f * (deltaUV2[1] * edge1[0] - deltaUV1[1] * edge2[0])), (f * (deltaUV2[1] * edge1[1] - deltaUV1[1] * edge2[1])), (f * (deltaUV2[1] * edge1[2] - deltaUV1[1] * edge2[2])))
+          self.tangent = glm.normalize(tangent)
+          bitangent = glm.vec3((f * (-deltaUV2[0] * edge1[0] + deltaUV1[0] * edge2[0])), (f * (-deltaUV2[0] * edge1[1] + deltaUV1[0] * edge2[1])), (f * (-deltaUV2[0] * edge1[2] + deltaUV1[0] * edge2[2])))
+          self.bitangent = glm.normalize(bitangent)
+          buffer.append(self.tangent.x)
+          buffer.append(self.tangent.y)
+          buffer.append(self.tangent.z)
+          buffer.append(self.bitangent.x)
+          buffer.append(self.bitangent.y)
+          buffer.append(self.bitangent.z)
+          
     self.vertBuffer = array(buffer, dtype=float32)
 
     self.VBO = glGenBuffers(1) # Vertex Buffer Object
@@ -114,15 +216,17 @@ class Model(object):
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, self.textureSurface.get_width(), self.textureSurface.get_height(), 0, GL_RGB, GL_UNSIGNED_BYTE, self.textureData)
     glGenerateMipmap(GL_TEXTURE_2D)
     # Bind texture 2
-    glActiveTexture(GL_TEXTURE1)
-    glBindTexture(GL_TEXTURE_2D, self.texture2)
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, self.textureSurface2.get_width(), self.textureSurface2.get_height(), 0, GL_RGB, GL_UNSIGNED_BYTE, self.textureData2)
-    glGenerateMipmap(GL_TEXTURE_2D)
+    if self.texture2 != None:
+      glActiveTexture(GL_TEXTURE1)
+      glBindTexture(GL_TEXTURE_2D, self.texture2)
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, self.textureSurface2.get_width(), self.textureSurface2.get_height(), 0, GL_RGB, GL_UNSIGNED_BYTE, self.textureData2)
+      glGenerateMipmap(GL_TEXTURE_2D)
     # Bind normal map
-    glActiveTexture(GL_TEXTURE2)
-    glBindTexture(GL_TEXTURE_2D, self.normalMap)
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, self.normalMapSurface.get_width(), self.normalMapSurface.get_height(), 0, GL_RGB, GL_UNSIGNED_BYTE, self.normalMapData)
-    glGenerateMipmap(GL_TEXTURE_2D)
+    if self.normalMap != None:
+      glActiveTexture(GL_TEXTURE2)
+      glBindTexture(GL_TEXTURE_2D, self.normalMap)
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, self.normalMapSurface.get_width(), self.normalMapSurface.get_height(), 0, GL_RGB, GL_UNSIGNED_BYTE, self.normalMapData)
+      glGenerateMipmap(GL_TEXTURE_2D)
 
     glDrawArrays(GL_TRIANGLES, 0, len(self.model.faces) * 3)
     #glDrawElements(GL_TRIANGLES, len(self.indexBuffer), GL_UNSIGNED_INT, None)
@@ -144,6 +248,7 @@ class Renderer(object):
     self.fov = 60
     self.currentTime = 0
     self.value = 0
+    self.actualModel = 0
     self.cameraMinDistance = 1
     self.cameraMaxDistance = 25
     self.target = glm.vec3(0.0, 0.0, 0.0)
@@ -152,7 +257,6 @@ class Renderer(object):
     self.projectionMatrix = glm.perspective(glm.radians(self.fov), self.width / self.height, 0.1, 1000) # fov, aspect ratio, near plane, far plane
 
   def cameraMovement(self, type):
-    d = ((self.camPos.x - self.target.x)**2 + (self.camPos.y - self.target.y)**2 + (self.camPos.z - self.target.z)**2)**0.5
     dx = ((self.camPos.x - self.target.x)**2 + (self.camPos.z - self.target.z)**2)**0.5
     dy = ((self.camPos.y - self.target.y)**2 + (self.camPos.z - self.target.z)**2)**0.5
     if type == "forward":
@@ -168,14 +272,11 @@ class Renderer(object):
       self.camPos.z = -glm.cos(glm.radians(self.camRotRef.x)) * dx
     elif type == "right":
       if math.copysign(1, self.camPos.z) != math.copysign(1, -glm.cos(glm.radians(self.camRotRef.x + 1)) * dx):
-        #print(self.camRotRef.z)
         self.camRotRef += glm.vec3(0, 0, 180)
       self.camRotRef -= glm.vec3(-1, 0, 0)
       self.camPos.x = -glm.sin(glm.radians(self.camRotRef.x)) * dx
       self.camPos.z = -glm.cos(glm.radians(self.camRotRef.x)) * dx
     elif type == "up":
-      #print(self.camPos.z)
-      #print(-glm.cos(glm.radians(self.camRotRef.z + 1)) * dy)
       if math.copysign(1, self.camPos.z) == math.copysign(1, -glm.cos(glm.radians(self.camRotRef.z + 1)) * dy):
         self.camRotRef -= glm.vec3(0, -1, -1)
         self.camPos.y = -glm.sin(glm.radians(self.camRotRef.y)) * dy
@@ -197,11 +298,37 @@ class Renderer(object):
   def filledMode(self):
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
 
+  def changeModel(self, action):
+    if action == "next":
+      self.actualModel += 1
+      if self.actualModel >= len(self.scene):
+        self.actualModel = 0
+    elif action == "previous":
+      self.actualModel -= 1
+      if self.actualModel < 0:
+        self.actualModel = len(self.scene) - 1
+
   def setShaders(self, vertexShader, fragmentShader):
     if vertexShader is not None and fragmentShader is not None:
       self.activeShader = compileProgram(compileShader(vertexShader, GL_VERTEX_SHADER), compileShader(fragmentShader, GL_FRAGMENT_SHADER))
     else:
       self.activeShader = None
+
+  def moveModel(self, action):
+    for model in self.scene:
+      if model.id == self.actualModel:
+        if action == "up":
+          model.pos += glm.vec3(0, 0.01, 0)
+        elif action == "down":
+          model.pos += glm.vec3(0, -0.01, 0)
+        elif action == "left":
+          model.pos += glm.vec3(-0.01, 0, 0)
+        elif action == "right":
+          model.pos += glm.vec3(0.01, 0, 0)
+        elif action == "forward":
+          model.pos += glm.vec3(0, 0, -0.01)
+        elif action == "backward":
+          model.pos += glm.vec3(0, 0, 0.01)
 
   def render(self):
     glClearColor(0.2, 0.2, 0.2, 1.0)
@@ -220,11 +347,12 @@ class Renderer(object):
       glUniform3f(glGetUniformLocation(self.activeShader, "camPos"), self.camPos.x, self.camPos.y, self.camPos.z)
 
     for obj in self.scene:
-      if self.activeShader:
-        glUniformMatrix4fv(glGetUniformLocation(self.activeShader, "modelMatrix"), 1, GL_FALSE, glm.value_ptr(obj.getModelMatrix()))
-        glUniform1i(glGetUniformLocation(self.activeShader, "textureSampler"), 0)
-        glUniform1i(glGetUniformLocation(self.activeShader, "textureSampler2"), 1)
-        glUniform1i(glGetUniformLocation(self.activeShader, "normalMap"), 2)
-        glUniform1f(glGetUniformLocation(self.activeShader, "maxY"), obj.maxY)
-        glUniform1f(glGetUniformLocation(self.activeShader, "minY"), obj.minY)
-      obj.renderInScene()
+      if obj.id == self.actualModel:
+        if self.activeShader:
+          glUniformMatrix4fv(glGetUniformLocation(self.activeShader, "modelMatrix"), 1, GL_FALSE, glm.value_ptr(obj.getModelMatrix()))
+          glUniform1i(glGetUniformLocation(self.activeShader, "textureSampler"), 0)
+          glUniform1i(glGetUniformLocation(self.activeShader, "textureSampler2"), 1)
+          glUniform1i(glGetUniformLocation(self.activeShader, "normalMap"), 2)
+          glUniform1f(glGetUniformLocation(self.activeShader, "maxY"), obj.maxY)
+          glUniform1f(glGetUniformLocation(self.activeShader, "minY"), obj.minY)
+        obj.renderInScene()
